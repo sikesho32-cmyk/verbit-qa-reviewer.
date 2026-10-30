@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcript QA & Reviewer Studio</title>
+<style>
+:root {
+  --bg: #f5f6f8; --card: #ffffff; --ink: #14181f; --muted: #596273;
+  --line: #dde1e8; --accent: #0f766e; --accent-ink: #ffffff; --accent-soft: #ccfbf1;
+  --ok: #157f3b; --warn: #a85a07; --bad: #b42318; --info: #3b5bdb; --field: #ffffff; --radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1217; --card: #161b22; --ink: #e7eaf0; --muted: #98a2b3;
+    --line: #28303b; --accent: #14b8a6; --accent-ink: #042f2e; --accent-soft: #115e59;
+    --ok: #4cc27a; --warn: #f0a24a; --bad: #ff7b72; --info: #8da7ff; --field: #0f141b;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, sans-serif; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px 56px; }
+header.top { padding: 28px 0 18px; display: flex; flex-direction: column; gap: 8px; }
+header.top h1 { margin: 0; font-size: 26px; color: var(--accent); }
+header.top p { margin: 0; color: var(--muted); font-size: 14px; }
+.nav-tabs { display: flex; gap: 8px; margin: 16px 0; border-bottom: 1px solid var(--line); padding-bottom: 8px; overflow-x: auto; }
+.tab-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; white-space: nowrap; }
+.tab-btn.active { background: var(--accent-soft); color: var(--accent); }
+.grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 980px) { .grid { grid-template-columns: 1fr 1fr; } .span2 { grid-column: 1 / -1; } }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+.card h2 { margin: 0 0 4px; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+.card h2 .n { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 700; }
+.card .sub { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 5px; }
+.row { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 560px) { .row.two { grid-template-columns: 1fr 1fr; } .row.three { grid-template-columns: 1fr 1fr 1fr; } .row.four { grid-template-columns: repeat(4, 1fr); } }
+input[type=text], input[type=number], select, textarea { width: 100%; background: var(--field); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font: inherit; }
+textarea { resize: vertical; min-height: 120px; }
+.hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+button { font: inherit; font-weight: 600; border-radius: 8px; padding: 9px 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.big { padding: 12px 20px; font-size: 15px; }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.score-box { background: var(--bg); border: 1px solid var(--line); padding: 16px; border-radius: 8px; text-align: center; }
+.score-box .score-val { font-size: 36px; font-weight: 800; color: var(--ok); }
+.score-box.fail .score-val { color: var(--bad); }
+.score-box.warn .score-val { color: var(--warn); }
+.error-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+.error-table th { text-align: left; padding: 6px; border-bottom: 2px solid var(--line); color: var(--muted); }
+.error-table td { padding: 6px; border-bottom: 1px solid var(--line); }
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 10; }
+.toast.show { opacity: .96; }
+footer { margin-top: 24px; color: var(--muted); font-size: 12.5px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <h1>🔍 Transcription Reviewer & QA Studio</h1>
+  <p>Review submitted transcriptions, calculate accuracy scores, record error breakdowns, and generate audit reports.</p>
+</header>
+<nav class="nav-tabs">
+  <button class="tab-btn active" onclick="showTab('audit', event)">📋 Review & Audit</button>
+  <button class="tab-btn" onclick="showTab('rubric', event)">⚖️ QA Rubric & Deductions</button>
+</nav>
+
+<div id="tab-audit" class="tab-content">
+  <div class="grid">
+    <section class="card">
+      <h2><span class="n">1</span>Review Metadata</h2>
+      <p class="sub">Track job information, transcriptionist details, and job settings.</p>
+      <div class="row two">
+        <div><label for="reviewJob">Job Title / Topic</label><input type="text" id="reviewJob" placeholder="e.g. Sequoia China Technology Trends"></div>
+        <div><label for="transcriptionist">Transcriptionist Name</label><input type="text" id="transcriptionist" value="Godhand Benson"></div>
+      </div>
+      <div class="row two">
+        <div><label for="reviewer">Reviewer Name</label><input type="text" id="reviewer" value="QA Specialist"></div>
+        <div><label for="reviewDate">Review Date</label><input type="text" id="reviewDate" placeholder="DD/MM/YYYY"></div>
+      </div>
+      <div class="row two">
+        <div>
+          <label for="modeType">Target Mode</label>
+          <select id="modeType">
+            <option value="strict">Strict Verbatim</option>
+            <option value="edited" selected>Clean / Edited Verbatim</option>
+          </select>
+        </div>
+        <div>
+          <label for="totalWords">Total Word Count</label>
+          <input type="number" id="totalWords" value="500" min="1" oninput="calcScore()">
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="n">2</span>Error Tracking & Deductions</h2>
+      <p class="sub">Log error occurrences to calculate the final QA Score.</p>
+      <div class="row four">
+        <div>
+          <label for="eWords">Word Errors (-1%)</label>
+          <input type="number" id="eWords" value="0" min="0" oninput="calcScore()">
+          <div class="hint">Missing/wrong words</div>
+        </div>
+        <div>
+          <label for="eSpk">Speaker Tags (-2%)</label>
+          <input type="number" id="eSpk" value="0" min="0" oninput="calcScore()">
+          <div class="hint">Wrong tag / gender</div>
+        </div>
+        <div>
+          <label for="eTs">Timestamps (-2%)</label>
+          <input type="number" id="eTs" value="0" min="0" oninput="calcScore()">
+          <div class="hint">Bad millisecond/sync</div>
+        </div>
+        <div>
+          <label for="eRules">Rule Errors (-1%)</label>
+          <input type="number" id="eRules" value="0" min="0" oninput="calcScore()">
+          <div class="hint">Numbers, fillers, UI quotes</div>
+        </div>
+      </div>
+      <div class="score-box" id="scoreDisplay" style="margin-top: 16px;">
+        <div style="font-size: 12px; color: var(--muted); font-weight: 700;">CALCULATED ACCURACY SCORE</div>
+        <div class="score-val" id="scoreVal">100%</div>
+        <div id="scoreStatus"><span class="badge" style="background:var(--ok); color:#fff;">PASS</span></div>
+      </div>
+        </section>
+            <section class="card span2">
+      <h2><span class="n">3</span>Submitted Transcript Evaluation</h2>
+      <p class="sub">Paste transcript text for review, auto-checking, or manual annotation.</p>
+      <textarea id="reviewText" placeholder="Paste the generated transcript here to review..."></textarea>
+      <div class="btns">
+        <button id="btnAutoScan" class="primary">Auto-Scan for Guidelines Violations</button>
+        <button id="btnClearReview">Clear Text</button>
+      </div>
+      <div id="scanResults" style="margin-top: 12px;"></div>
+    </section>
+
+    <section class="card span2">
+      <h2><span class="n">4</span>QA Audit Summary & Report</h2>
+      <p class="sub">Generate feedback for the transcriptionist.</p>
+      <label for="feedback">Reviewer Comments / Specific Corrections</label>
+      <textarea id="feedback" placeholder="Provide constructive feedback..."></textarea>
+      
+      <div class="btns" style="margin-top: 14px;">
+        <button id="btnGenReport" class="primary big">Generate QA Review Report</button>
+        <button id="btnCopyReport">Copy Audit Report</button>
+      </div>
+      
+      <label for="reportOut" style="margin-top: 16px;">Final Audit Report</label>
+      <textarea id="reportOut" readonly style="min-height: 180px; font-family: monospace;"></textarea>
+    </section>
+  </div>
+</div>
+
+<div id="tab-rubric" class="tab-content" style="display:none;">
+  <div class="grid">
+    <section class="card span2">
+      <h2><span class="n">⚖️</span>Quality Assessment Scoring Rubric</h2>
+      <table class="error-table">
+        <thead>
+          <tr>
+            <th>Error Category</th>
+            <th>Description</th>
+            <th>Weight / Penalty</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Word Accuracy</strong></td>
+            <td>Omissions, misheard words, inserted extra words, or spelling mistakes.</td>
+            <td>-1.0% per instance</td>
+          </tr>
+          <tr>
+            <td><strong>Speaker Identification</strong></td>
+            <td>Incorrect speaker label, missing speaker tag, or wrong gender assignment.</td>
+            <td>-2.0% per instance</td>
+          </tr>
+          <tr>
+            <td><strong>Timestamping & Sync</strong></td>
+            <td>Inaccurate timestamp boundaries or missing millisecond values.</td>
+            <td>-2.0% per instance</td>
+          </tr>
+          <tr>
+            <td><strong>Formatting & House Rules</strong></td>
+            <td>Topic title non-7-words, improper numbers/currencies, or leftover fillers in Clean Verbatim.</td>
+            <td>-1.0% per instance</td>
+          </tr>
+          <tr>
+            <td><strong>Passing Threshold</strong></td>
+            <td colspan="2"><strong style="color:var(--ok)">98.0% Accuracy Score or higher</strong> is required to pass.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+</div>
+
+<footer>Transcript Studio Reviewer Module</footer>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+function showTab(tabName, evt) {
+  document.querySelectorAll('.tab-content').forEach(function(el) { el.style.display = 'none'; });
+  document.querySelectorAll('.tab-btn').forEach(function(btn) { btn.classList.remove('active'); });
+  document.getElementById('tab-' + tabName).style.display = 'block';
+  evt.currentTarget.classList.add('active');
+}
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2200);
+}
+
+function calcScore() {
+  var totalWords = parseInt(document.getElementById('totalWords').value, 10) || 500;
+  var eWords = parseInt(document.getElementById('eWords').value, 10) || 0;
+  var eSpk = parseInt(document.getElementById('eSpk').value, 10) || 0;
+  var eTs = parseInt(document.getElementById('eTs').value, 10) || 0;
+  var eRules = parseInt(document.getElementById('eRules').value, 10) || 0;
+
+  var totalPenalties = (eWords * 1) + (eSpk * 2) + (eTs * 2) + (eRules * 1);
+  var score = Math.max(0, 100 - ((totalPenalties / totalWords) * 100));
+  score = Math.round(score * 10) / 10;
+
+  var scoreVal = document.getElementById('scoreVal');
+  var scoreBox = document.getElementById('scoreDisplay');
+  var scoreStatus = document.getElementById('scoreStatus');
+
+  scoreVal.textContent = score + '%';
+
+  scoreBox.classList.remove('fail', 'warn');
+  if (score >= 98) {
+    scoreStatus.innerHTML = '<span class="badge" style="background:var(--ok); color:#fff;">PASS</span>';
+  } else if (score >= 95) {
+    scoreBox.classList.add('warn');
+    scoreStatus.innerHTML = '<span class="badge" style="background:var(--warn); color:#fff;">NEEDS REVISION</span>';
+  } else {
+    scoreBox.classList.add('fail');
+    scoreStatus.innerHTML = '<span class="badge" style="background:var(--bad); color:#fff;">FAIL / REJECT</span>';
+  }
+}
+
+document.getElementById('btnAutoScan').addEventListener('click', function() {
+  var text = document.getElementById('reviewText').value;
+  if (!text.trim()) { toast('Paste transcript text to scan'); return; }
+
+  var issues = [];
+  
+  var topicMatch = /^Transcription Job:\s*(.+)$/m.exec(text);
+  if (topicMatch) {
+    var words = topicMatch[1].trim().split(/\s+/);
+    if (words.length !== 7) {
+      issues.push('⚠️ Topic header line does not contain exactly 7 words (found ' + words.length + ' words).');
+    }
+  } else {
+    issues.push('❌ Missing "Transcription Job:" header line.');
+  }
+
+  var mode = document.getElementById('modeType').value;
+  if (mode === 'edited') {
+    var fillers = text.match(/\b(um|uh|uhm|ah)\b/gi);
+    if (fillers) {
+      issues.push('⚠️ Found ' + fillers.length + ' filler word(s) in Clean Verbatim mode: ' + fillers.slice(0, 5).join(', ') + '...');
+    }
+  }
+
+  var tsMatches = text.match(/\[\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}\]/g);
+  if (!tsMatches) {
+    issues.push('⚠️ No valid millisecond timestamps found matching [HH:MM:SS.mmm --> HH:MM:SS.mmm].');
+  }
+
+  var resDiv = document.getElementById('scanResults');
+  if (issues.length === 0) {
+    resDiv.innerHTML = '<div style="color:var(--ok); font-weight:bold;">✅ Automated scan passed! No common rule violations detected.</div>';
+  } else {
+    resDiv.innerHTML = '<div style="color:var(--bad); font-weight:bold;">Potential Issues Detected:</div><ul><li>' + issues.join('</li><li>') + '</li></ul>';
+  }
+  toast('Scan completed');
+});
+
+document.getElementById('btnGenReport').addEventListener('click', function() {
+  var job = document.getElementById('reviewJob').value || 'Untitled Job';
+  var worker = document.getElementById('transcriptionist').value || 'N/A';
+  var reviewer = document.getElementById('reviewer').value || 'N/A';
+  var score = document.getElementById('scoreVal').textContent;
+  var status = document.getElementById('scoreStatus').innerText.trim();
+  var feedback = document.getElementById('feedback').value || 'No specific comments provided.';
+
+  var report = [
+    '=== TRANSCRIPTION QA AUDIT REPORT ===',
+    'Job Topic: ' + job,
+    'Transcriptionist: ' + worker,
+    'Reviewer: ' + reviewer,
+    'Date: ' + (document.getElementById('reviewDate').value || new Date().toLocaleDateString()),
+    '-------------------------------------',
+    'FINAL ACCURACY SCORE: ' + score,
+    'QA STATUS: ' + status,
+    '-------------------------------------',
+    'ERROR SUMMARY:',
+    '- Word Errors: ' + (document.getElementById('eWords').value || 0),
+    '- Speaker Tag Errors: ' + (document.getElementById('eSpk').value || 0),
+    '- Timestamp Errors: ' + (document.getElementById('eTs').value || 0),
+    '- Formatting / Rule Violations: ' + (document.getElementById('eRules').value || 0),
+    '-------------------------------------',
+    'REVIEWER FEEDBACK:',
+    feedback,
+    '====================================='
+  ].join('\n');
+
+  document.getElementById('reportOut').value = report;
+  toast('Report generated!');
+});
+
+document.getElementById('btnCopyReport').addEventListener('click', function() {
+  var r = document.getElementById('reportOut');
+  if (!r.value) { toast('Generate a report first'); return; }
+  navigator.clipboard.writeText(r.value);
+  toast('Report copied to clipboard!');
+});
+
+document.getElementById('btnClearReview').addEventListener('click', function() {
+  document.getElementById('reviewText').value = '';
+  document.getElementById('scanResults').innerHTML = '';
+});
+</script>
+</html>
